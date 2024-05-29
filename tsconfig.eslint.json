@@ -2,6 +2,7 @@
   "extends": "./tsconfig.json",
   "include": [
     "scripts/**/*.ts",
+    "blueprint.config.ts",
     "wrappers/**/*.ts",
     "tests/**/*.ts"
   ],

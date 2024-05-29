@@ -5,7 +5,7 @@ import { TonClient4, WalletContractV4 } from '@ton/ton';
 // ================================================================= //
 import { Main } from '../build/Contract/tact_Main';
 import { Role } from '../build/Contract/tact_Role';
-import { printHeader } from './utils/print';
+import { printHeader } from '../utils/print';
 
 // ================================================================= //
 const admin = Address.parse(''); // 🔴 Change to your own, by creating .env file!

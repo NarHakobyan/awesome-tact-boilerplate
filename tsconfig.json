@@ -1,6 +1,12 @@
 {
+    "include": [
+        "tests/**/*.ts",
+        "wrappers/**/*.ts",
+        "web/**/*.ts",
+        "scripts/**/*.ts"
+    ],
     "compilerOptions": {
-        "target": "ES2020",
+        "target": "ESNext",
         "outDir": "dist",
         "module": "commonjs",
         "declaration": true,

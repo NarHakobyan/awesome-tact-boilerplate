@@ -1,8 +1,9 @@
+import { HRDroneJetton } from './../../build/Jetton/tact_HRDroneJetton';
 import { Address, beginCell, contractAddress, fromNano, internal, toNano } from '@ton/core';
 import { mnemonicToPrivateKey } from '@ton/crypto';
 import { TonClient, TonClient4, WalletContractV4 } from '@ton/ton';
 
-import { SampleJetton } from './output/jetton_SampleJetton';
+import { HRDroneJetton } from '../../build/Jetton/tact_HRDroneJetton';
 import { buildOnchainMetadata } from './utils/jetton-helpers';
 
 async function main() {
@@ -41,8 +42,8 @@ async function main() {
   // - Data is stored on-chain (except for the image data itself)
 
   const jettonParams = {
-    name: 'TactJet-12',
-    description: 'This is description of Test tact jetton',
+    name: 'HRDroneJetton',
+    description: 'HR Drone Jetton is a token for HR Drone services. It is used to pay for the services of HR Drone.',
     image: 'https://ipfs.io/ipfs/QmbPZjC1tuP6ickCCBtoTCQ9gc3RpkbKx7C1LMYQdcLwti', // Image url
   };
 

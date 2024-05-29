@@ -2,8 +2,8 @@ import { Address, beginCell, contractAddress, toNano } from '@ton/core';
 
 // ================================================================= //
 import { Main, storeCreate } from '../build/Contract/tact_Main';
-import { deploy } from './utils/deploy';
-import { printAddress, printHeader } from './utils/print';
+import { deploy } from '../utils/deploy';
+import { printAddress, printHeader } from '../utils/print';
 // ================================================================= //
 
 const admin = Address.parse(''); // 🔴 Change to your own, by creating .env file!

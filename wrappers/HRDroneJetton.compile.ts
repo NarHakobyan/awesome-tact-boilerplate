@@ -2,5 +2,5 @@ import type { CompilerConfig } from '@ton/blueprint';
 
 export const compile: CompilerConfig = {
   lang: 'tact',
-  target: 'contracts/jetton.tact',
+  target: 'contracts/hrdrone_jetton.tact',
 };

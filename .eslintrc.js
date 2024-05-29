@@ -230,7 +230,7 @@ module.exports = {
     /**
      * plugin:eslint
      */
-    'no-await-in-loop': 'error',
+    'no-await-in-loop': 'off',
     'padding-line-between-statements': [
       'error',
       {blankLine: 'always', prev: '*', next: 'return'},
