@@ -2,16 +2,13 @@ import type { NetworkProvider } from '@ton/blueprint';
 import { Address, toNano } from '@ton/core';
 
 import { HRDroneJetton } from '../build/HRDroneJetton/tact_HRDroneJetton';
+import { isContractDeployed } from '../utils/contract';
 
 export async function run(provider: NetworkProvider, _args: string[]) {
   const ui = provider.ui();
   const address = Address.parse(process.env.HRDRONE_TOKEN_ADDRESS!);
 
-  if (!(await provider.isContractDeployed(address))) {
-    ui.write(`Error: Contract at address ${address} is not deployed!`);
-
-    return;
-  }
+  await isContractDeployed(provider, address);
 
   const amount = Number.parseInt(await ui.input('Amount: '), 10);
 

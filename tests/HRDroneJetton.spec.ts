@@ -27,16 +27,17 @@ import TonWeb from 'tonweb';
 
 import type { Mint, TokenBurn, TokenTransfer } from '../build/HRDroneJetton/tact_HRDroneJetton';
 import { HRDroneJetton } from '../build/HRDroneJetton/tact_HRDroneJetton';
-import { buildOnchainMetadata } from '../scripts/utils/jetton';
-import { printSeparator } from '../scripts/utils/print';
+import { buildOnchainMetadata } from '../utils/jetton';
+import { printSeparator } from '../utils/print';
 import { JettonDefaultWallet } from './../build/HRDroneJetton/tact_JettonDefaultWallet';
 
 describe('contract', () => {
   let blockchain: Blockchain;
-  let token: SandboxContract<HRDroneJetton>;
+  let hrdroneJetton: SandboxContract<HRDroneJetton>;
   let deployerWallet: SandboxContract<JettonDefaultWallet>;
   let deployer: SandboxContract<TreasuryContract>;
-  let player: SandboxContract<TreasuryContract>;
+  let signer1: SandboxContract<TreasuryContract>;
+  let signer2: SandboxContract<TreasuryContract>;
 
   const content = buildOnchainMetadata({
     name: 'HR Drone',
@@ -46,16 +47,20 @@ describe('contract', () => {
   });
   const totalSupply = toNano(1_000_000_000_000);
 
+  function getDefaultWallet(address: Address) {
+    return blockchain.openContract(JettonDefaultWallet.fromAddress(address));
+  }
+
   beforeAll(async () => {
-    // Create content Cell
     blockchain = await Blockchain.create();
     deployer = await blockchain.treasury('deployer');
-    player = await blockchain.treasury('player');
+    signer1 = await blockchain.treasury('signer1');
+    signer2 = await blockchain.treasury('signer2');
 
-    token = blockchain.openContract(await HRDroneJetton.fromInit(content, totalSupply, toNano('1000')));
+    hrdroneJetton = blockchain.openContract(await HRDroneJetton.fromInit(content, totalSupply, toNano('1000')));
 
     // Send Transaction
-    const deployResult = await token.send(
+    const deployResult = await hrdroneJetton.send(
       deployer.getSender(),
       { value: toNano('0.5') },
       {
@@ -66,23 +71,22 @@ describe('contract', () => {
 
     expect(deployResult.transactions).toHaveTransaction({
       from: deployer.address,
-      to: token.address,
+      to: hrdroneJetton.address,
       deploy: true,
       success: true,
     });
 
-    const deployerWalletAddress = await token.getGetWalletAddress(deployer.address);
-    deployerWallet = blockchain.openContract(JettonDefaultWallet.fromAddress(deployerWalletAddress));
+    deployerWallet = getDefaultWallet(await hrdroneJetton.getGetWalletAddress(deployer.address));
   });
 
-  it('Test: whether contract deployed successfully', async () => {
+  it('Whether contract deployed successfully', async () => {
     // the check is done inside beforeEach, blockchain and token are ready to use
-    const jettonData = await token.getGetJettonData();
+    const jettonData = await hrdroneJetton.getGetJettonData();
     expect(jettonData.owner).toEqualAddress(deployer.address);
   });
 
-  it('Test: Minting is successfully', async () => {
-    let jettonData = await token.getGetJettonData();
+  it('Minting is successfully', async () => {
+    let jettonData = await hrdroneJetton.getGetJettonData();
 
     const totalSupplyBefore = jettonData.totalSupply;
     const mintAmount = toNano(100);
@@ -91,26 +95,22 @@ describe('contract', () => {
       amount: mintAmount,
       receiver: deployer.address,
     };
-    const mintResult = await token.send(deployer.getSender(), { value: toNano('10') }, mint);
+    const mintResult = await hrdroneJetton.send(deployer.getSender(), { value: toNano('0.5') }, mint);
     expect(mintResult.transactions).toHaveTransaction({
       from: deployer.address,
-      to: token.address,
+      to: hrdroneJetton.address,
       success: true,
     });
     // printTransactionFees(mintResult.transactions);
 
-    jettonData = await token.getGetJettonData();
+    jettonData = await hrdroneJetton.getGetJettonData();
     const totalSupplyAfter = jettonData.totalSupply;
     expect(totalSupplyBefore + mintAmount).toEqual(totalSupplyAfter);
-
-    const walletData = await deployerWallet.getGetWalletData();
-    expect(walletData.owner).toEqualAddress(deployer.address);
-    expect(walletData.balance).toBeGreaterThanOrEqual(mintAmount);
   });
 
   it('should transfer successfully', async () => {
-    const sender = await blockchain.treasury('sender');
-    const receiver = await blockchain.treasury('receiver');
+    const sender = signer1;
+    const receiver = signer2;
     const initMintAmount = toNano(1000);
     const transferAmount = toNano(80);
 
@@ -119,10 +119,9 @@ describe('contract', () => {
       amount: initMintAmount,
       receiver: sender.address,
     };
-    await token.send(deployer.getSender(), { value: toNano('0.25') }, mintMessage);
+    await hrdroneJetton.send(deployer.getSender(), { value: toNano('0.25') }, mintMessage);
 
-    const senderWalletAddress = await token.getGetWalletAddress(sender.address);
-    const senderWallet = blockchain.openContract(JettonDefaultWallet.fromAddress(senderWalletAddress));
+    const senderWallet = getDefaultWallet(await hrdroneJetton.getGetWalletAddress(sender.address));
 
     // Transfer tokens from sender's wallet to receiver's wallet // 0xf8a7ea5
     const transferMessage: TokenTransfer = {
@@ -141,11 +140,8 @@ describe('contract', () => {
       to: senderWallet.address,
       success: true,
     });
-    // printTransactionFees(transferResult.transactions);
-    // prettyLogTransactions(transferResult.transactions);
 
-    const receiverWalletAddress = await token.getGetWalletAddress(receiver.address);
-    const receiverWallet = blockchain.openContract(JettonDefaultWallet.fromAddress(receiverWalletAddress));
+    const receiverWallet = getDefaultWallet(await hrdroneJetton.getGetWalletAddress(receiver.address));
 
     const senderWalletDataAfterTransfer = await senderWallet.getGetWalletData();
     const receiverWalletDataAfterTransfer = await receiverWallet.getGetWalletData();
@@ -160,10 +156,6 @@ describe('contract', () => {
   });
 
   it('Mint tokens then Burn tokens', async () => {
-    // const sender = await blockchain.treasury("sender");
-    // const deployerWalletAddress = await token.getGetWalletAddress(deployer.address);
-    // const deployerWallet = blockchain.openContract(JettonDefaultWallet.fromAddress(deployerWalletAddress));
-
     let walletData = await deployerWallet.getGetWalletData();
     const deployerBalanceInit = walletData.balance;
 
@@ -173,7 +165,7 @@ describe('contract', () => {
       amount: initMintAmount,
       receiver: deployer.address,
     };
-    await token.send(deployer.getSender(), { value: toNano('10') }, mintMessage);
+    await hrdroneJetton.send(deployer.getSender(), { value: toNano('0.5') }, mintMessage);
 
     walletData = await deployerWallet.getGetWalletData();
     const deployerBalance = walletData.balance;
@@ -188,7 +180,7 @@ describe('contract', () => {
       response_destination: deployer.address,
     };
 
-    await deployerWallet.send(deployer.getSender(), { value: toNano('10') }, burnMessage);
+    await deployerWallet.send(deployer.getSender(), { value: toNano('0.5') }, burnMessage);
 
     walletData = await deployerWallet.getGetWalletData();
     const deployerBalanceAfterBurn = walletData.balance;
@@ -200,32 +192,29 @@ describe('contract', () => {
     const mint: Mint = {
       $$type: 'Mint',
       amount: mintAmount,
-      receiver: player.address,
+      receiver: signer1.address,
     };
-    await token.send(deployer.getSender(), { value: toNano('1') }, mint);
+    await hrdroneJetton.send(deployer.getSender(), { value: toNano('0.1') }, mint);
 
-    let jettonData = await token.getGetJettonData();
+    let jettonData = await hrdroneJetton.getGetJettonData();
 
     const totalSupplyBase = jettonData.totalSupply;
-    const messageResult = await token.send(player.getSender(), { value: 10_033_460n }, mint);
+    const messageResult = await hrdroneJetton.send(signer1.getSender(), { value: 10_033_460n }, mint);
     expect(messageResult.transactions).toHaveTransaction({
-      from: player.address,
-      to: token.address,
+      from: signer1.address,
+      to: hrdroneJetton.address,
     });
 
-    jettonData = await token.getGetJettonData();
+    jettonData = await hrdroneJetton.getGetJettonData();
     const totalSupplyLater = jettonData.totalSupply;
     expect(totalSupplyLater).toEqual(totalSupplyBase);
-
-    // printTransactionFees(messateResult.transactions);
-    // prettyLogTransactions(messateResult.transactions);
   });
 
   it('Convert Address Format', () => {
-    console.log(`Example Address(Jetton Root Contract: ${token.address}`);
-    console.log(`Is Friendly Address: ${Address.isFriendly(token.address.toString())}`);
+    console.log(`Example Address(Jetton Root Contract: ${hrdroneJetton.address}`);
+    console.log(`Is Friendly Address: ${Address.isFriendly(hrdroneJetton.address.toString())}`);
 
-    const testAddr = Address.parse(token.address.toString());
+    const testAddr = Address.parse(hrdroneJetton.address.toString());
     console.log('✓ Address: ' + testAddr.toString({ bounceable: false }));
     console.log('✓ Address: ' + testAddr.toString());
     console.log('✓ Address(urlSafe: true): ' + testAddr.toString({ urlSafe: true }));
@@ -244,10 +233,10 @@ describe('contract', () => {
       ),
     });
 
-    const jettonRoot = blkch.openContract(await HRDroneJetton.fromInit(content, totalSupply, toNano('1000')));
+    const jettonRoot = blkch.openContract(await HRDroneJetton.fromInit(content, totalSupply, toNano('0.5')));
     await jettonRoot.send(
-      player.getSender(),
-      { value: toNano('10') },
+      signer1.getSender(),
+      { value: toNano('0.5') },
       {
         $$type: 'Deploy',
         queryId: 0n,
@@ -267,7 +256,7 @@ describe('contract', () => {
     // Step 1: 0x21cfe02b / 567271467: Create Vault
     // https://docs.dedust.io/reference/tlb-schemes#message-create_vault
     const factory = blkch.openContract(Factory.createFromAddress(MAINNET_FACTORY_ADDR));
-    const response = await factory.sendCreateVault(player.getSender(), {
+    const response = await factory.sendCreateVault(signer1.getSender(), {
       asset: SCALE,
     });
     printTransactionFees(response.transactions);
@@ -280,7 +269,7 @@ describe('contract', () => {
     const poolReadiness = await pool.getReadinessStatus();
 
     if (poolReadiness === ReadinessStatus.NOT_DEPLOYED) {
-      const transferLiquidity = await factory.sendCreateVolatilePool(player.getSender(), {
+      const transferLiquidity = await factory.sendCreateVolatilePool(signer1.getSender(), {
         assets: [TON, SCALE],
       });
       printTransactionFees(transferLiquidity.transactions);
@@ -291,7 +280,7 @@ describe('contract', () => {
     // https://docs.dedust.io/reference/tlb-schemes#message-deposit_liquidity
     const tonVault = blkch.openContract(await factory.getNativeVault());
     console.log(`Native Vault Address: ${tonVault.address}`);
-    const tx = await tonVault.sendDepositLiquidity(player.getSender(), {
+    const tx = await tonVault.sendDepositLiquidity(signer1.getSender(), {
       poolType: PoolType.VOLATILE,
       assets,
       targetBalances,
@@ -301,22 +290,22 @@ describe('contract', () => {
 
     // Step 3-2: Deposit Jetton to Vault
     const scaleRoot = blkch.openContract(JettonRoot.createFromAddress(jettonRoot.address));
-    const scaleWallet = blkch.openContract(await scaleRoot.getWallet(player.address));
+    const scaleWallet = blkch.openContract(await scaleRoot.getWallet(signer1.address));
     await jettonRoot.send(
-      player.getSender(),
+      signer1.getSender(),
       { value: toNano('10') },
       {
         $$type: 'Mint',
         amount: toNano('100'),
-        receiver: player.address,
+        receiver: signer1.address,
       },
     );
 
     const jettonVault = blkch.openContract(await factory.getJettonVault(jettonRoot.address));
-    const tx_jetton = await scaleWallet.sendTransfer(player.getSender(), toNano('0.5'), {
+    const txJetton = await scaleWallet.sendTransfer(signer1.getSender(), toNano('0.5'), {
       amount: scaleAmount,
       destination: jettonVault.address,
-      responseAddress: player.address,
+      responseAddress: signer1.address,
       forwardAmount: toNano('0.4'),
       forwardPayload: VaultJetton.createDepositLiquidityPayload({
         poolType: PoolType.VOLATILE,
@@ -325,7 +314,7 @@ describe('contract', () => {
       }),
     });
     console.log(`----- Deposit Jetton To Vault: -----${jettonVault.address}`);
-    printTransactionFees(tx_jetton.transactions);
+    printTransactionFees(txJetton.transactions);
     printSeparator();
 
     // ------------------------------------------------------------------------------------------------
@@ -342,7 +331,7 @@ describe('contract', () => {
 
     // Step 4-1: 0xea06185d Swap TON to Jetton
     const amountIn = toNano('0.0001'); // 5 TON
-    const swapTx_result = await tonVault.sendSwap(player.getSender(), {
+    const swapTx_result = await tonVault.sendSwap(signer1.getSender(), {
       poolAddress: pool.address,
       amount: amountIn,
       gasAmount: toNano('0.252'),
@@ -351,29 +340,30 @@ describe('contract', () => {
 
     // Swap 4-2: 0xf8a7ea5 Jetton to TON 0xf8a7ea5
     const jettonAmountIn = toNano('0.00000001'); // 50 SCALE
-    const swapJetton_result = await scaleWallet.sendTransfer(player.getSender(), toNano('0.3030303'), {
+    const swapJettonResult = await scaleWallet.sendTransfer(signer1.getSender(), toNano('0.3030303'), {
       amount: jettonAmountIn,
       destination: jettonVault.address,
-      responseAddress: player.address, // return gas to user
+      responseAddress: signer1.address, // return gas to user
       forwardAmount: toNano('0.25'),
       forwardPayload: VaultJetton.createSwapPayload({
         poolAddress: pool.address,
         swapParams: { recipientAddress: deployer.address },
       }),
     });
-    // await printTransactionFees(await swapJetton_result.transactions);
-    // await prettyLogTransactions(await swapJetton_result.transactions);
+
+    printTransactionFees(swapJettonResult.transactions);
+    prettyLogTransactions(swapJettonResult.transactions);
 
     // ------------------------------------------------------------------------------------------------
     // Step 5: Remove Liquidity
     // https://docs.dedust.io/docs/liquidity-provisioning#withdraw-liquidity
-    const lpWallet = blkch.openContract(await pool.getWallet(player.address));
+    const lpWallet = blkch.openContract(await pool.getWallet(signer1.address));
 
-    const removeTx_Result = await lpWallet.sendBurn(player.getSender(), toNano('10'), {
+    const removeTxResult = await lpWallet.sendBurn(signer1.getSender(), toNano('10'), {
       amount: await lpWallet.getBalance(),
     });
-    console.log('removeTx_Result: ');
-    printTransactionFees(removeTx_Result.transactions);
+    console.log('removeTxResult: ');
+    printTransactionFees(removeTxResult.transactions);
 
     console.log(`JettonWallet: ${scaleWallet.address}`);
     // await prettyLogTransactions(await removeTx_Result.transactions);

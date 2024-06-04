@@ -2,9 +2,10 @@ import { getHttpEndpoint } from '@orbs-network/ton-access';
 import { mnemonicToWalletKey } from '@ton/crypto';
 import type { OpenedContract } from '@ton/ton';
 import { TonClient, WalletContractV4 } from '@ton/ton';
+import { beginCell } from '@ton/core';
 
-export async function getTonClient(isMainNet = true): Promise<TonClient> {
-  const endpoint = await getHttpEndpoint({ network: isMainNet ? 'mainnet' : 'testnet' });
+export async function getTonClient(): Promise<TonClient> {
+  const endpoint = await getHttpEndpoint({ network: process.env.ENABLE_MAINNET ? 'mainnet' : 'testnet' });
 
   return new TonClient({ endpoint });
 }
@@ -37,4 +38,8 @@ export async function waitForTransaction(seqno: number, walletContract: OpenedCo
   }
 
   console.log(`Tx (seqno: ${seqno}) confirmed!`);
+}
+
+export function keyToInt(publicKey: Buffer) {
+  return beginCell().storeBuffer(publicKey).endCell().beginParse().loadUintBig(256);
 }

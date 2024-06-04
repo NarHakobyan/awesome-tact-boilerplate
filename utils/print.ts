@@ -14,13 +14,9 @@ export function printHeader(name: string) {
 }
 
 export function printAddress(address: Address, testnet = true) {
-  console.log('Address: ' + address.toString({ testOnly: testnet }));
+  console.log(`Address: ${address.toString({ testOnly: testnet })}`);
   console.log(
-    'Explorer: ' +
-      'https://' +
-      (testnet ? 'testnet.' : '') +
-      'tonapi.io/account/' +
-      address.toString({ testOnly: testnet }),
+    `Explorer: https://${testnet ? 'testnet.' : ''}tonscan.org/address/${address.toString({ testOnly: testnet })}`,
   );
   printSeparator();
 }
@@ -32,9 +28,7 @@ export function printDeploy(init: { code: Cell; data: Cell }, value: bigint, com
   // Resovle init
   const initStr = base64url(beginCell().store(storeStateInit(init)).endCell().toBoc({ idx: false }));
 
-  let link: string;
-
-  link =
+  const link =
     typeof command === 'string'
       ? `https://${testnet ? 'test.' : ''}tonhub.com/transfer/` +
         to.toString({ testOnly: testnet }) +

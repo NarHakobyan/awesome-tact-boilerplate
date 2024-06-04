@@ -14,25 +14,21 @@ contract HRDroneJetton with Deployable, Jetton {
     content: Cell;
     mintable: Bool;
 
-    max_supply: Int as coins;
+    maxSupply: Int as coins;
 
-    init(content: Cell, totalSupply: Int, owner_mint_amount: Int) {
+    init(content: Cell, totalSupply: Int) {
         self.totalSupply = 0;
         self.owner = sender();
         self.mintable = true;
         self.content = content;
-        self.max_supply = totalSupply; // Initial Setting for max_supply
-
-        self.mint(self.owner, owner_mint_amount, self.owner);
+        self.maxSupply = totalSupply;
     }
 
     receive(msg: Mint) {
-        require(sender() == self.owner, "Not Owner");
+        self.requireOwner();
         require(self.mintable, "Can't Mint Anymore");
         self.mint(msg.receiver, msg.amount, self.owner); // (to, amount, response_destination)
     }
-
-
 }
 
 struct JettonData {
@@ -52,7 +48,7 @@ trait Jetton with Ownable {
     owner: Address;
     content: Cell;
 
-    max_supply: Int; // This is not in the TEP-74 interface
+    maxSupply: Int; // This is not in the TEP-74 interface
 
     receive(msg: TokenUpdateContent) {
         self.requireOwner();                // Allow changing content only by owner
@@ -80,7 +76,7 @@ trait Jetton with Ownable {
     // @amount The amount of Jetton token being minted
     // @response_destination The previous owner address
     fun mint(to: Address, amount: Int, response_destination: Address) {
-        require(self.totalSupply + amount <= self.max_supply, "The total supply will be overlapping.");
+        require(self.totalSupply + amount <= self.maxSupply, "The total supply will be overlapping.");
         self.totalSupply = self.totalSupply + amount; // Update total supply
 
         let winit: StateInit = self.getJettonWalletInit(to); // Create message

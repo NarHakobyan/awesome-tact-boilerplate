@@ -2,12 +2,10 @@ import type { NetworkProvider } from '@ton/blueprint';
 import { toNano } from '@ton/core';
 
 import { HRDroneJetton } from '../build/HRDroneJetton/tact_HRDroneJetton';
-import { buildOnchainMetadata } from './utils/jetton';
+import { buildOnchainMetadata } from '../utils/jetton';
 
 export async function run(provider: NetworkProvider) {
   const maxSupply = toNano('1000000000');
-
-  //   const owner = Address.parse('UQAsB6vBUeSPdQ_XnIrTt8psWXpxdcJmCKVgyuDQYr8B2HQg');
 
   const content = {
     name: 'HR Drone',
