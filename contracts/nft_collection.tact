@@ -1,30 +1,49 @@
 import "@stdlib/ownable";
 import "@stdlib/deploy";
-import "./imports/messages";
+import "./imports/nft-messages";
 import "./imports/globals";
-import "./nft_item";
+import "./imports/nft-new-standard";
 
-//trait IHaveRoyalty {
-//    royalty_params: RoyaltyParams;
-//
-//    receive(msg: GetRoyaltyParams) {
-//        send(SendParameters{
-//        to: sender(),
-//        value: 0,
-//        mode: SendRemainingValue,
-//        body: ReportRoyaltyParams{
-//        query_id: msg.query_id,
-//        numerator: self.royalty_params.numerator,
-//        denominator: self.royalty_params.denominator,
-//        destination: self.royalty_params.destination
-//        }.toCell()
-//        });
-//    }
-//
-//    get fun royalty_params(): RoyaltyParams {
-//        return self.royalty_params;
-//    }
-//}
+contract NftItem with INFTNewStandard {
+    is_initialized: Bool = false;
+    collection_address: Address;
+    owner: Address;
+    item_index: Int as uint64;
+    individual_content: Cell;
+    is_granted: Bool = true;
+    ungranted_transfers: Int as uint16 = 0;
+    prev_owners: map<Address, Int>;
+
+    init(collection_address: Address, item_index: Int) {
+        self.collection_address = collection_address;
+        self.item_index = item_index;
+
+        self.owner = self.collection_address;
+        self.individual_content = emptyCell();
+    }
+
+    receive(msg: NftDeploy) {
+        require(sender() == self.collection_address, "Invalid Sender");
+        require(self.item_index == msg.item_index, "Invalid index");
+        require(!self.is_initialized, "Already initialized");
+        self.owner = msg.item_owner;
+        self.individual_content = msg.individual_content;
+        self.is_initialized = true;
+    }
+
+    receive(msg: NftDestroy) {
+        require(sender() == self.owner, "Invalid Owner");
+        self.owner = myAddress();
+        send(SendParameters{
+        to: sender(),
+        value: 0,
+        mode: SendRemainingBalance,
+        body: Excesses{
+        query_id: msg.query_id
+        }.toCell()
+        });
+    }
+}
 
 fun get_percent(a: Int, percent: Int, factor: Int) : Int {
     if (factor == 0) {
@@ -35,10 +54,10 @@ fun get_percent(a: Int, percent: Int, factor: Int) : Int {
     }
 }
 
-contract NftCollection with Ownable, Deployable, IHaveRoyalty {
+contract NftCollection with OwnableTransferable, Deployable, IHaveRoyalty {
     owner: Address;
     next_item_index: Int as uint64 = 0;
-    collection_content: Cell;
+    content: Cell;
     royalty_params: RoyaltyParams;
 
     // Collection authors should work out the way of valuing their NFTs
@@ -46,7 +65,7 @@ contract NftCollection with Ownable, Deployable, IHaveRoyalty {
 
     init(data: NftCollectionData) {
         self.owner = data.owner;
-        self.collection_content = data.collection_content;
+        self.content = data.content;
         self.royalty_params = data.royalty_params;
     }
 
@@ -118,7 +137,7 @@ contract NftCollection with Ownable, Deployable, IHaveRoyalty {
         return initOf NftItem(myAddress(), item_index);
     }
     get fun get_collection_data(): NftCollectionData {
-        return NftCollectionData{next_item_index: self.next_item_index, collection_content: self.collection_content, owner: self.owner, royalty_params: self.royalty_params};
+        return NftCollectionData{next_item_index: self.next_item_index, content: self.content, owner: self.owner, royalty_params: self.royalty_params};
     }
     get fun get_nft_address_by_index(item_index: Int): Address {
         return contractAddress(self.getNftItemInit(item_index));

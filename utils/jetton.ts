@@ -50,7 +50,7 @@ const sha256 = (str: string) => {
 
 const toKey = (key: string) => BigInt(`0x${sha256(key).toString('hex')}`);
 
-export function buildOnchainMetadata(data: { name: string; description: string; image: string; symbol: string }): Cell {
+export function buildOnchainMetadata(data: Record<string, any>): Cell {
   const dict = Dictionary.empty(Dictionary.Keys.BigUint(256), Dictionary.Values.Cell());
 
   for (const [key, value] of Object.entries(data)) {

@@ -1,8 +1,7 @@
 import "@stdlib/ownable";
-import "./structs.tact";
-import "./sbt/sbt_item.tact";
-import "./sbt/messages.tact";
-import "./jetton.tact";
+import "./imports/nft-structs";
+import "./sbt/sbt_item";
+import "./imports/jetton";
 
 const DONATE_OP: Int = 0x6e872bd4;
 const STAKE_OP: Int = 0x18f2907e;
@@ -232,7 +231,7 @@ contract Staking with OwnableTransferable {
             bounce: false,
             mode: mode,
             body: TokenTransfer {
-                queryId: query_id,
+                query_id: query_id,
                 amount: jetton_amount,
                 destination: destination,
                 response_destination: destination,
@@ -269,16 +268,16 @@ contract Staking with OwnableTransferable {
                 .endCell();
     }
 
-    get fun get_staking_info(): StakingInfo {
-        return StakingInfo {
-            reward_supply: self.reward_supply,
-            balance: self.balance,
-            base_reward_supply: self.BASE_REWARD_SUPPLY,
-            min_stake: self.MIN_STAKE_AMOUNT,
-            max_percent: self.MAX_PERCENT,
-            min_percent: self.MIN_PERCENT,
-            max_lockup: self.MAX_LOCKUP,
-            min_lockup: self.MIN_LOCKUP
-        };
-    }
+//    get fun get_staking_info(): StakingInfo {
+//        return StakingInfo {
+//            reward_supply: self.reward_supply,
+//            balance: self.balance,
+//            base_reward_supply: self.BASE_REWARD_SUPPLY,
+//            min_stake: self.MIN_STAKE_AMOUNT,
+//            max_percent: self.MAX_PERCENT,
+//            min_percent: self.MIN_PERCENT,
+//            max_lockup: self.MAX_LOCKUP,
+//            min_lockup: self.MIN_LOCKUP
+//        };
+//    }
 }

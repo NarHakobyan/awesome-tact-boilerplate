@@ -1,19 +1,14 @@
 import { compile } from '@ton/blueprint';
 import type { Cell, TupleItemInt } from '@ton/core';
-import { Address, beginCell, ContractProvider, Dictionary, fromNano, Slice, toNano } from '@ton/core';
+import { Address, Dictionary, fromNano, toNano } from '@ton/core';
 import type { SandboxContract, TreasuryContract } from '@ton/sandbox';
 import { Blockchain } from '@ton/sandbox';
 import { randomAddress } from '@ton/test-utils';
 
-import {
-  buildCollectionContentCell,
-  itemContent,
-  setItemContentCell,
-  toSha256,
-} from '../scripts/collectionContent/onChain';
-import { NexTon } from '../wrappers/NexTon';
-import { NftCollection } from '../wrappers/NftCollection';
-import { NftItem } from '../wrappers/NftItem';
+import { NexTon } from '../build/NexTon/tact_NexTon';
+import { NftCollection } from '../build/NftCollection/tact_NftCollection';
+import { NftItem } from '../build/NftCollection/tact_NftItem';
+import { buildCollectionContentCell, toSha256 } from '../scripts/collectionContent/onChain';
 
 describe('NexTon', () => {
   let code: Cell;
@@ -41,9 +36,10 @@ describe('NexTon', () => {
     deployer = await blockchain.treasury('deployer');
 
     nftCollection = blockchain.openContract(
-      await NftCollection.createFromConfig(
+      await NftCollection.fromInit(
         {
-          ownerAddress: deployer.address,
+          $$type: 'NftCollectionData',
+          owner: deployer.address,
           nextItemIndex: 0,
           collectionContent: buildCollectionContentCell({
             name: 'Collection name',

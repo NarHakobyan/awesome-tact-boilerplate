@@ -1,20 +1,14 @@
 struct NftCollectionData {
   owner: Address;
   next_item_index: Int as uint64;
-  collection_content: Cell;
+  content: Cell;
   royalty_params: RoyaltyParams;
 }
 
-struct NftItemData { 
+struct NftItemData {
   is_initialized: Bool;
   item_index: Int as uint64;
-  collection_address: Address; 
+  collection_address: Address;
   owner: Address;
   individual_content: Cell;
-}
-
-struct RoyaltyParams {
-  numerator: Int as uint16;
-  denominator: Int as uint16;
-  destination: Address;
 }

@@ -1,5 +1,6 @@
 import type { NetworkProvider } from '@ton/blueprint';
 import { toNano } from '@ton/core';
+import { NftCollection } from '../build/NftCollection/tact_NftCollection';
 
 export async function run(provider: NetworkProvider) {
   const nftCollection = provider.open(await NftCollection.fromInit());

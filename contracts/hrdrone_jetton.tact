@@ -1,21 +1,21 @@
 import "@stdlib/deploy";
 
-import "./jetton.tact";
+import "./imports/jetton";
 
 contract HRDroneJetton with Deployable, Jetton {
-    totalSupply: Int as coins;
+    total_supply: Int as coins;
     owner: Address;
     content: Cell;
     mintable: Bool;
 
-    maxSupply: Int as coins;
+    max_supply: Int as coins;
 
-    init(content: Cell, totalSupply: Int) {
-        self.totalSupply = 0;
+    init(content: Cell, total_supply: Int) {
+        self.total_supply = 0;
         self.owner = sender();
-        self.mintable = true;
         self.content = content;
-        self.maxSupply = totalSupply;
+        self.mintable = true;
+        self.max_supply = total_supply;
     }
 
     receive(msg: Mint) {

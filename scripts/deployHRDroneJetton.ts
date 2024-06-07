@@ -15,7 +15,7 @@ export async function run(provider: NetworkProvider) {
     image: 'https://hrdrone.am/favicon-180x180.png',
     //image_data:""
   };
-  const jetton = provider.open(await HRDroneJetton.fromInit(buildOnchainMetadata(content), maxSupply, toNano('1000')));
+  const jetton = provider.open(await HRDroneJetton.fromInit(buildOnchainMetadata(content), maxSupply));
 
   await jetton.send(
     provider.sender(),

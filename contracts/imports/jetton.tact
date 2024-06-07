@@ -1,78 +1,18 @@
 import "@stdlib/ownable";
 
-struct JettonData {
-  totalSupply: Int;
-  mintable: Bool;
-  owner: Address;
-  content: Cell;
-  walletCode: Cell;
-}
-
-message Mint {
-  amount: Int;
-  receiver: Address;
-}
-
-
-message(0xf8a7ea5) TokenTransfer {
-  queryId: Int as uint64;
-  amount: Int as coins;
-  destination: Address;
-  response_destination: Address;
-  custom_payload: Cell?;
-  forward_ton_amount: Int as coins;
-  forward_payload: Slice as remaining; // Comment Text message when Transfer the jetton
-}
-
-message(0x178d4519) TokenTransferInternal {
-  queryId: Int as uint64;
-  amount: Int as coins;
-  from: Address;
-  response_destination: Address;
-  forward_ton_amount: Int as coins;
-  forward_payload: Slice as remaining; // Comment Text message when Transfer the jetton
-}
-
-message(0x7362d09c) TokenNotification {
-  queryId: Int as uint64;
-  amount: Int as coins;
-  from: Address;
-  forward_payload: Slice as remaining; // Comment Text message when Transfer the jetton
-}
-
-message(0x595f07bc) TokenBurn {
-  queryId: Int as uint64;
-  amount: Int as coins;
-  owner: Address;
-  response_destination: Address;
-}
-
-message(0x7bdd97de) TokenBurnNotification {
-  queryId: Int as uint64;
-  amount: Int as coins;
-  owner: Address;
-  response_destination: Address?;
-}
-
-message(0xd53276db) TokenExcesses {
-  queryId: Int as uint64;
-}
-
-message TokenUpdateContent {
-  content: Cell;
-}
-
+import "./jetton-structs";
+import "./jetton-messages";
 
 // ============================================================================================================ //
 @interface("org.ton.jetton.master")
 trait Jetton with Ownable {
 
-  totalSupply: Int; // Already set initially
+  total_supply: Int; // Already set initially
   mintable: Bool;
   owner: Address;
   content: Cell;
 
-  maxSupply: Int; // This is not in the TEP-74 interface
+  max_supply: Int; // This is not in the TEP-74 interface
 
   receive(msg: TokenUpdateContent) {
     self.requireOwner();                // Allow changing content only by owner
@@ -81,16 +21,17 @@ trait Jetton with Ownable {
 
   receive(msg: TokenBurnNotification) {
     self.requireWallet(msg.owner);                     // Check wallet
-    self.totalSupply = self.totalSupply - msg.amount; // Update supply
+    self.total_supply = self.total_supply - msg.amount; // Update supply
 
-    if (msg.response_destination != null) { // Cashback
+    if (msg.response_destination != null) {
+      // Cashback
       send(SendParameters{
       to: msg.response_destination!!,
       value: 0,
       bounce: false,
       mode: SendRemainingValue + SendIgnoreErrors,
       body: TokenExcesses{
-      queryId: msg.queryId
+      query_id: msg.query_id
       }.toCell()
       });
     }
@@ -100,8 +41,8 @@ trait Jetton with Ownable {
   // @amount The amount of Jetton token being minted
   // @response_destination The previous owner address
   fun mint(to: Address, amount: Int, response_destination: Address) {
-    require(self.totalSupply + amount <= self.maxSupply, "The total supply will be overlapping.");
-    self.totalSupply = self.totalSupply + amount; // Update total supply
+    require(self.total_supply + amount <= self.max_supply, "The total supply will be overlapping.");
+    self.total_supply = self.total_supply + amount; // Update total supply
 
     let winit: StateInit = self.getJettonWalletInit(to); // Create message
     send(SendParameters{
@@ -110,7 +51,7 @@ trait Jetton with Ownable {
     bounce: false,
     mode: SendRemainingValue,
     body: TokenTransferInternal{
-    queryId: 0,
+    query_id: 0,
     amount: amount,
     from: myAddress(),
     response_destination: response_destination,
@@ -136,11 +77,11 @@ trait Jetton with Ownable {
   get fun get_jetton_data(): JettonData {
     let code: Cell = self.getJettonWalletInit(myAddress()).code;
     return JettonData{
-    totalSupply: self.totalSupply,
+    total_supply: self.total_supply,
     mintable: self.mintable,
     owner: self.owner,
     content: self.content,
-    walletCode: code
+    wallet_code: code
     };
   }
 
@@ -152,8 +93,8 @@ trait Jetton with Ownable {
 // ============================================================ //
 @interface("org.ton.jetton.wallet")
 contract JettonDefaultWallet {
-  const minTonsForStorage: Int = ton("0.01");
-  const gasConsumption: Int = ton("0.01");
+  const min_tons_for_storage: Int = ton("0.01");
+  const gas_consumption: Int = ton("0.01");
 
   balance: Int;
   owner: Address;
@@ -165,13 +106,14 @@ contract JettonDefaultWallet {
     self.master = master;
   }
 
-  receive(msg: TokenTransfer) { // 0xf8a7ea5
+  receive(msg: TokenTransfer) {
+    // 0xf8a7ea5
     let ctx: Context = context(); // Check sender
     require(ctx.sender == self.owner, "Invalid sender");
 
     // Gas checks
     let fwdFee: Int = ctx.readForwardFee() + ctx.readForwardFee();
-    let final: Int =  2 * self.gasConsumption + self.minTonsForStorage + fwdFee;
+    let final: Int =  2 * self.gas_consumption + self.min_tons_for_storage + fwdFee;
     require(ctx.value > min(final, ton("0.01")), "Invalid value!!");
 
     // Update balance
@@ -186,7 +128,7 @@ contract JettonDefaultWallet {
     mode: SendRemainingValue,
     bounce: false,
     body: TokenTransferInternal{
-    queryId: msg.queryId,
+    query_id: msg.query_id,
     amount: msg.amount,
     from: self.owner,
     response_destination: msg.response_destination,
@@ -198,7 +140,8 @@ contract JettonDefaultWallet {
     });
   }
 
-  receive(msg: TokenTransferInternal) { // 0x178d4519
+  receive(msg: TokenTransferInternal) {
+    // 0x178d4519
     let ctx: Context = context();
 
     if (ctx.sender != self.master) {
@@ -223,7 +166,7 @@ contract JettonDefaultWallet {
       mode: SendPayGasSeparately + SendIgnoreErrors,
       bounce: false,
       body: TokenNotification {
-      queryId: msg.queryId,
+      query_id: msg.query_id,
       amount: msg.amount,
       from: msg.from,
       forward_payload: msg.forward_payload
@@ -238,7 +181,7 @@ contract JettonDefaultWallet {
       value: msgValue,
       bounce: false,
       body: TokenExcesses {
-      queryId: msg.queryId
+      query_id: msg.query_id
       }.toCell(),
       mode: SendIgnoreErrors
       });
@@ -253,7 +196,7 @@ contract JettonDefaultWallet {
     require(self.balance >= 0, "Invalid balance");
 
     let fwdFee: Int = ctx.readForwardFee(); // Gas checks
-    require(ctx.value > fwdFee + 2 * self.gasConsumption + self.minTonsForStorage, "Invalid value - Burn");
+    require(ctx.value > fwdFee + 2 * self.gas_consumption + self.min_tons_for_storage, "Invalid value - Burn");
 
     // Burn tokens
     send(SendParameters{
@@ -262,7 +205,7 @@ contract JettonDefaultWallet {
     mode: SendRemainingValue,
     bounce: true,
     body: TokenBurnNotification{
-    queryId: msg.queryId,
+    query_id: msg.query_id,
     amount: msg.amount,
     owner: self.owner,
     response_destination: self.owner
@@ -273,8 +216,8 @@ contract JettonDefaultWallet {
   get fun msgValue(value: Int): Int {
     let msgValue: Int = value;
     let tonBalanceBeforeMsg: Int = myBalance() - msgValue;
-    let storageFee: Int = self.minTonsForStorage - min(tonBalanceBeforeMsg, self.minTonsForStorage);
-    msgValue = msgValue - (storageFee + self.gasConsumption);
+    let storageFee: Int = self.min_tons_for_storage - min(tonBalanceBeforeMsg, self.min_tons_for_storage);
+    msgValue = msgValue - (storageFee + self.gas_consumption);
     return msgValue;
   }
 
@@ -291,14 +234,7 @@ contract JettonDefaultWallet {
     balance: self.balance,
     owner: self.owner,
     master: self.master,
-    walletCode: (initOf JettonDefaultWallet(self.master, self.owner)).code
+    wallet_code: (initOf JettonDefaultWallet(self.master, self.owner)).code
     };
   }
-}
-
-struct JettonWalletData {
-  balance: Int;
-  owner: Address;
-  master: Address;
-  walletCode: Cell;
 }

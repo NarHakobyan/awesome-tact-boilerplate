@@ -1,5 +1,4 @@
-import "./message.tact";
-import "./jetton.tact";
+import "./imports/jetton.tact";
 
 message PassScoreToRoundContract {
   checked_address: Address;

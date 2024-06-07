@@ -4,46 +4,45 @@ import type { NetworkProvider } from '@ton/blueprint';
 import { compile } from '@ton/blueprint';
 import { Address, toNano } from '@ton/core';
 
-import { NexTon } from '../wrappers/NexTon';
-import { NftCollection } from '../wrappers/NftCollection';
+import { NexTon } from '../build/NexTon/tact_NexTon';
+import { NftCollection } from '../build/NftCollection/tact_NftCollection';
 import { buildCollectionContentCell } from './collectionContent/onChain';
 
 const myAddress: Address = Address.parse('kQAXUIBw-EDVtnCxd65Z2M21KTDr07RoBL6BYf-TBCd6dTBu');
-const NextonOwner = Address.parse('UQABinqGRk8nJQcyRJqRI_ae4Wr9QW4SPoDQaTEy7TSmn0Yd');
 
 export async function run(provider: NetworkProvider) {
-  const randomSeed = Math.floor(Math.random() * 10_000);
   const ui = provider.ui();
 
-  // Deploying Collection !!!
-
   const collection = provider.open(
-    NftCollection.createFromConfig(
-      {
-        ownerAddress: provider.sender().address!,
-        nextItemIndex: 0,
-        collectionContent: buildCollectionContentCell({
-          name: 'NexTon Liquid Derivatives',
-          description: 'Collection of liquidity staking derivatives, issued by NexTon',
-          image: 'https://raw.githubusercontent.com/Nex-TON/Nexton_Contracts/main/Nexton_Logo.jpg',
-          social_links: [
-            'https://twitter.com/NextonNode',
-            'https://www.nexton.solutions/',
-            'https://t.me/nextonglobal',
-          ],
-        }),
-        nftItemCode: await compile('NftItem'),
-        royaltyParams: {
-          royaltyFactor: 50,
-          royaltyBase: 1000,
-          royaltyAddress: myAddress,
-        },
+    await NftCollection.fromInit({
+      $$type: 'NftCollectionData',
+      owner: provider.sender().address!,
+      next_item_index: 0n,
+      content: buildCollectionContentCell({
+        name: 'NexTon Liquid Derivatives',
+        description: 'Collection of liquidity staking derivatives, issued by NexTon',
+        image: 'https://raw.githubusercontent.com/Nex-TON/Nexton_Contracts/main/Nexton_Logo.jpg',
+        social_links: ['https://twitter.com/NextonNode', 'https://www.nexton.solutions/', 'https://t.me/nextonglobal'],
+      }),
+      royalty_params: {
+        $$type: 'RoyaltyParams',
+        denominator: 1000n,
+        destination: myAddress,
+        numerator: 350n,
       },
-      await compile('NftCollection'),
-    ),
+    }),
   );
 
-  await collection.sendDeploy(provider.sender(), toNano('0.2'));
+  await collection.send(
+    provider.sender(),
+    {
+      value: toNano('0.2'),
+    },
+    {
+      $$type: 'Deploy',
+      queryId: 0n,
+    },
+  );
 
   await provider.waitForDeploy(collection.address);
 
@@ -58,7 +57,7 @@ export async function run(provider: NetworkProvider) {
     },
     {
       $$type: 'Deploy',
-      queryId: 0n,
+      queryId: 1n,
     },
   );
 
@@ -68,7 +67,7 @@ export async function run(provider: NetworkProvider) {
   await nexton.send(
     provider.sender(),
     {
-      value: toNano('0.5'),
+      value: toNano('15'),
     },
     null,
   );
@@ -76,11 +75,17 @@ export async function run(provider: NetworkProvider) {
 
   // Changing owner !!!
 
-  await collection.sendChangeOwner(provider.sender(), {
-    value: toNano('0.11'),
-    newOwnerAddress: nexton.address,
-    queryId: BigInt(Date.now()),
-  });
+  await collection.send(
+    provider.sender(),
+    {
+      value: toNano('0.11'),
+    },
+    {
+      $$type: 'ChangeOwner',
+      newOwner: nexton.address,
+      queryId: 2n,
+    },
+  );
 
   ui.write('Collection owner changed !!!');
 

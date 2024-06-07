@@ -1,4 +1,5 @@
 import "@stdlib/ownable";
+import "./nft-messages";
 
 
 trait IHaveRoyalty {
@@ -107,8 +108,8 @@ trait INFTNewStandard {
             mode: SendRemainingValue,
             body: ReportStaticData{
                 query_id: msg.query_id,
-                item_index: self.item_index,
-                collection_address: self.collection_address
+            index_id: self.item_index,
+            collection: self.collection_address
             }.toCell()
         });
     }

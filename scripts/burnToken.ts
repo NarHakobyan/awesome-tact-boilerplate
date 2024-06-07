@@ -1,12 +1,10 @@
 import type { NetworkProvider } from '@ton/blueprint';
-import { Address, toNano } from '@ton/core';
+import { toNano } from '@ton/core';
 
-import { CrowdSale } from '../build/CrowdSale/tact_CrowdSale';
-import { HRDroneJetton } from '../build/HRDroneJetton/tact_HRDroneJetton';
 import { getHRDroneJetton, isContractDeployed } from '../utils/contract';
 
 export async function run(provider: NetworkProvider, _args: string[]) {
-  const ui = provider.ui();
+  // const ui = provider.ui();
 
   const hRDroneJetton = getHRDroneJetton();
 
